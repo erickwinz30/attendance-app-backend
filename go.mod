@@ -1,4 +1,4 @@
-module attendance-app/backend
+module backend
 
 go 1.25.5
 

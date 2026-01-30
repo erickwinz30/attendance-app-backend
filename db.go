@@ -2,6 +2,7 @@
 package main
 
 import (
+	"backend/handlers"
 	"database/sql"
 	"log"
 	"net/http"
@@ -43,6 +44,7 @@ func main() {
 	http.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+	http.HandleFunc("/api/users", handlers.GetUsers(db))
 
 	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
