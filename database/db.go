@@ -1,20 +1,17 @@
-// main.go
-package main
+package database
 
 import (
-	"backend/handlers"
 	"database/sql"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var DB *sql.DB
 
-func init() {
+func Init() {
 	// Muat .env
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
@@ -29,23 +26,12 @@ func init() {
 		" sslmode=disable"
 
 	var err error
-	db, err = sql.Open("postgres", psqlInfo)
+	DB, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = db.Ping(); err != nil {
+	if err = DB.Ping(); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("✅ Connected to PostgreSQL")
-}
-
-func main() {
-	// Contoh endpoint
-	http.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
-	http.HandleFunc("/api/users", handlers.GetUsers(db))
-
-	log.Println("Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }

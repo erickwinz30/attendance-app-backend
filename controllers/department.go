@@ -1,14 +1,14 @@
 package controllers
 
-import "database/sql"
+import "backend/database"
 
 type Department struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
-func GetDepartments(db *sql.DB) ([]Department, error) {
-	rows, err := db.Query(`
+func GetDepartments() ([]Department, error) {
+	rows, err := database.DB.Query(`
 		SELECT id, name 
 		FROM departments 
 		ORDER BY name ASC
