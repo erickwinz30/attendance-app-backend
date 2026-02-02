@@ -23,6 +23,7 @@ func main() {
 	}).Methods("GET")
 
 	// user routes - tidak perlu passing db lagi
+	route.HandleFunc("/api/users/search", handlers.SearchUsers()).Methods("GET")
 	route.HandleFunc("/api/users", handlers.GetUsers()).Methods("GET")
 	route.HandleFunc("/api/users", handlers.CreateUser()).Methods("POST")
 

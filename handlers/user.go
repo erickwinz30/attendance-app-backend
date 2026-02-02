@@ -70,13 +70,31 @@ func CreateUser() http.HandlerFunc {
 		// Panggil controller untuk membuat user baru
 		result, err := controllers.CreateUser(newUser)
 		if err != nil {
-			http.Error(w, "Gagal membuat pengguna baru", http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Gagal membuat pengguna baru: %v", err), http.StatusInternalServerError)
 			return
 		}
 
+		fmt.Println("User created successfully (handlers):", result)
+
 		w.WriteHeader(http.StatusCreated)
 		// w.Write([]byte("Pengguna baru berhasil dibuat"))
-		json.NewEncoder(w).Encode(result)
+		// json.NewEncoder(w).Encode(result)
 
+	}
+}
+
+func SearchUsers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Implementasi pencarian pengguna berdasarkan query parameter
+
+		query := r.URL.Query().Get("q")
+		users, err := controllers.SearchUsers(query)
+		if err != nil {
+			http.Error(w, "Gagal mencari pengguna", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(users)
 	}
 }
