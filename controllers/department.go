@@ -1,13 +1,11 @@
 package controllers
 
-import "backend/database"
+import (
+	"backend/database"
+	"backend/types"
+)
 
-type Department struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-func GetDepartments() ([]Department, error) {
+func GetDepartments() ([]types.Department, error) {
 	rows, err := database.DB.Query(`
 		SELECT id, name 
 		FROM departments 
@@ -20,9 +18,9 @@ func GetDepartments() ([]Department, error) {
 
 	defer rows.Close()
 
-	departments := []Department{}
+	departments := []types.Department{}
 	for rows.Next() {
-		var dept Department
+		var dept types.Department
 		err := rows.Scan(&dept.ID, &dept.Name)
 		if err != nil {
 			return nil, err

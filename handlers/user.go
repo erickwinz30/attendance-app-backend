@@ -2,19 +2,11 @@ package handlers
 
 import (
 	"backend/controllers"
+	"backend/types"
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
-
-// type CreateUserRequest struct {
-// 	Name         string `json:"name"`
-// 	Email        string `json:"email"`
-// 	Phone        string `json:"phone"`
-// 	Position     string `json:"position"`
-// 	DepartmentID int    `json:"department_id"`
-// 	Status       string `json:"status"`
-// }
 
 func GetUsers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +36,7 @@ func GetUser(userID int) http.HandlerFunc {
 
 func CreateUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var newUser controllers.CreateUserRequest
+		var newUser types.CreateUserRequest
 		// gunakan json decoder untuk parsing body
 		err := json.NewDecoder(r.Body).Decode(&newUser)
 		if err != nil {

@@ -2,33 +2,12 @@ package controllers
 
 import (
 	"backend/database"
+	"backend/types"
 	"database/sql"
 	"fmt"
-	"time"
 )
 
-type User struct {
-	ID             int       `json:"id"`
-	Name           string    `json:"name"`
-	Email          string    `json:"email"`
-	Phone          string    `json:"phone"`
-	Position       string    `json:"position"`
-	DepartmentID   int       `json:"department_id"`
-	DepartmentName string    `json:"department_name"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-}
-
-type CreateUserRequest struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Phone        string `json:"phone"`
-	Position     string `json:"position"`
-	DepartmentID int    `json:"department_id"`
-	Status       string `json:"status"`
-}
-
-func GetAllUsers() ([]User, error) {
+func GetAllUsers() ([]types.User, error) {
 	rows, err := database.DB.Query(`
         SELECT 
             u.id, u.name, u.email, u.phone, u.position, 
@@ -45,9 +24,9 @@ func GetAllUsers() ([]User, error) {
 
 	defer rows.Close()
 
-	var users []User
+	var users []types.User
 	for rows.Next() {
-		var user User
+		var user types.User
 		err := rows.Scan(
 			&user.ID,
 			&user.Name,
@@ -68,8 +47,8 @@ func GetAllUsers() ([]User, error) {
 	return users, nil
 }
 
-func GetUser(userID int) (*User, error) {
-	var user User
+func GetUser(userID int) (*types.User, error) {
+	var user types.User
 	err := database.DB.QueryRow(`
         SELECT 
             u.id, u.name, u.email, u.phone, u.position, 
@@ -97,7 +76,7 @@ func GetUser(userID int) (*User, error) {
 	return &user, nil
 }
 
-func CreateUser(req CreateUserRequest) (CreateUserRequest, error) {
+func CreateUser(req types.CreateUserRequest) (types.CreateUserRequest, error) {
 	fmt.Println("Creating user with data (controller):", req)
 
 	// cek apakah email sudah ada
@@ -139,7 +118,7 @@ func CreateUser(req CreateUserRequest) (CreateUserRequest, error) {
 	return req, nil
 }
 
-func SearchUsers(query string) ([]User, error) {
+func SearchUsers(query string) ([]types.User, error) {
 	rows, err := database.DB.Query(`
         SELECT 
             u.id, u.name, u.email, u.phone, u.position, 
@@ -159,9 +138,9 @@ func SearchUsers(query string) ([]User, error) {
 	}
 	defer rows.Close()
 
-	var users []User
+	var users []types.User
 	for rows.Next() {
-		var user User
+		var user types.User
 		err := rows.Scan(
 			&user.ID,
 			&user.Name,

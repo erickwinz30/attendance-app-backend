@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -41,14 +43,30 @@ func main() {
 
 	fmt.Println("✅ Terhubung ke PostgreSQL")
 
-	// Buat tabel jika belum ada
+	// Migrate Fresh: Drop tables, create, dan seed ulang
+	dropTables(db)
 	createTables(db)
 
 	// Seed data
 	seedDepartments(db)
 	seedUsers(db)
 
-	fmt.Println("🌱 Seeding selesai!")
+	fmt.Println("🌱 Migrate Fresh & Seeding selesai!")
+}
+
+func dropTables(db *sql.DB) {
+	fmt.Println("🗑️  Menghapus tabel yang ada...")
+
+	// Drop tables dalam urutan terbalik (karena foreign key constraints)
+	tables := []string{"attendance_tokens", "users", "departments"}
+	for _, table := range tables {
+		_, err := db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table))
+		if err != nil {
+			log.Printf("Gagal menghapus tabel %s: %v", table, err)
+		}
+	}
+
+	fmt.Println("✅ Semua tabel berhasil dihapus")
 }
 
 func createTables(db *sql.DB) {
@@ -73,6 +91,7 @@ func createTables(db *sql.DB) {
 			position TEXT,
 			department_id INTEGER NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
 			status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
+			password_hash TEXT NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -80,7 +99,22 @@ func createTables(db *sql.DB) {
 		log.Fatal("Gagal membuat tabel users:", err)
 	}
 
-	fmt.Println("✅ Tabel departments dan users siap")
+	// Tabel attendance_tokens
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS attendance_tokens (
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id),
+			token TEXT UNIQUE NOT NULL,
+			expires_at TIMESTAMP NOT NULL,
+			used BOOLEAN DEFAULT false,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		log.Fatal("Gagal membuat tabel attendance_tokens:", err)
+	}
+
+	fmt.Println("✅ Semua tabel siap (departments, users, attendance_tokens)")
 }
 
 func seedDepartments(db *sql.DB) {
@@ -109,17 +143,17 @@ func seedUsers(db *sql.DB) {
 		Position   string
 		Department string
 		Status     string
+		Password   string
 	}{
-		{"Ahmad Fauzi", "ahmad.fauzi@company.com", "+62 812-3456-7890", "Software Engineer", "IT", "active"},
-		{"Siti Nurhaliza", "siti.nurhaliza@company.com", "+62 813-4567-8901", "Product Manager", "Product", "active"},
-		{"Budi Santoso", "budi.santoso@company.com", "+62 814-5678-9012", "UI/UX Designer", "Design", "active"},
-		{"Rina Wijaya", "rina.wijaya@company.com", "+62 815-6789-0123", "HR Manager", "HR", "inactive"},
-		{"Dewi Lestari", "dewi.lestari@company.com", "+62 816-7890-1234", "Marketing Specialist", "Marketing", "active"},
-		{"Andi Pratama", "andi.pratama@company.com", "+62 817-8901-2345", "Backend Developer", "IT", "active"},
+		{"Ahmad Fauzi", "ahmad.fauzi@company.com", "+62 812-3456-7890", "Software Engineer", "IT", "active", "password123"},
+		{"Siti Nurhaliza", "siti.nurhaliza@company.com", "+62 813-4567-8901", "Product Manager", "Product", "active", "password123"},
+		{"Budi Santoso", "budi.santoso@company.com", "+62 814-5678-9012", "UI/UX Designer", "Design", "active", "password123"},
+		{"Rina Wijaya", "rina.wijaya@company.com", "+62 815-6789-0123", "HR Manager", "HR", "inactive", "password123"},
+		{"Dewi Lestari", "dewi.lestari@company.com", "+62 816-7890-1234", "Marketing Specialist", "Marketing", "active", "password123"},
+		{"Andi Pratama", "andi.pratama@company.com", "+62 817-8901-2345", "Backend Developer", "IT", "active", "password123"},
 	}
 
 	for _, u := range users {
-		// Dapatkan department_id dari nama departemen
 		var deptID int
 		err := db.QueryRow("SELECT id FROM departments WHERE name = $1", u.Department).Scan(&deptID)
 		if err != nil {
@@ -127,12 +161,18 @@ func seedUsers(db *sql.DB) {
 			continue
 		}
 
-		// Sisipkan user (hindari duplikat email)
+		// Hash password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("Gagal hash password untuk %s: %v", u.Name, err)
+			continue
+		}
+
 		_, err = db.Exec(`
-			INSERT INTO users (name, email, phone, position, department_id, status)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (email) DO NOTHING;
-		`, u.Name, u.Email, u.Phone, u.Position, deptID, u.Status)
+		INSERT INTO users (name, email, phone, position, department_id, status, password_hash)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (email) DO NOTHING;
+	`, u.Name, u.Email, u.Phone, u.Position, deptID, u.Status, string(hashedPassword))
 
 		if err != nil {
 			log.Printf("Gagal menyisipkan user %s: %v", u.Name, err)
