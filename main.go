@@ -4,6 +4,7 @@ package main
 import (
 	"backend/database"
 	"backend/handlers"
+	"backend/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -29,20 +30,24 @@ func init() {
 }
 
 func main() {
-	route := mux.NewRouter()
+	r := mux.NewRouter()
+	r.Use(middleware.CORSMiddleware)
 
 	// Route publik (tidak perlu login)
-	route.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
 	// Route autentikasi
-	route.HandleFunc("/api/login", handlers.LoginHandler).Methods("POST")
-	route.HandleFunc("/api/logout", handlers.LogoutHandler).Methods("POST")
+	r.HandleFunc("/api/login", handlers.LoginHandler).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/logout", handlers.LogoutHandler).Methods("POST", "OPTIONS")
 
 	// Route yang memerlukan autentikasi
-	protected := route.PathPrefix("/api").Subrouter()
+	protected := r.PathPrefix("/api").Subrouter()
 	protected.Use(handlers.RequireAuth) // Middleware untuk cek login
+
+	// route untuk check session
+	protected.HandleFunc("/auth/check", handlers.CheckAuthentication()).Methods("GET")
 
 	// User routes (butuh login)
 	protected.HandleFunc("/users/search", handlers.SearchUsers()).Methods("GET")
@@ -63,5 +68,5 @@ func main() {
 	protected.HandleFunc("/departments", handlers.GetDepartments()).Methods("GET")
 
 	log.Println("Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", route))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

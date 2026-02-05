@@ -22,3 +22,10 @@ type CreateUserRequest struct {
 	DepartmentID int    `json:"department_id"`
 	Status       string `json:"status"`
 }
+
+type CheckUserTemp struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	DepartmentID int    `json:"department_id"`
+}
