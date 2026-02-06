@@ -49,11 +49,16 @@ func main() {
 	// route untuk check session
 	protected.HandleFunc("/auth/check", handlers.CheckAuthentication()).Methods("GET")
 
+	// buat route khusus HR
+	hrOnly := r.PathPrefix("/api").Subrouter()
+	hrOnly.Use(handlers.RequireAuth)
+	hrOnly.Use(handlers.RequireHR)
+
 	// User routes (butuh login)
-	protected.HandleFunc("/users/search", handlers.SearchUsers()).Methods("GET")
-	protected.HandleFunc("/users", handlers.GetUsers()).Methods("GET")
-	protected.HandleFunc("/users", handlers.CreateUser()).Methods("POST")
-	protected.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	hrOnly.HandleFunc("/users/search", handlers.SearchUsers()).Methods("GET")
+	hrOnly.HandleFunc("/users", handlers.GetUsers()).Methods("GET")
+	hrOnly.HandleFunc("/users", handlers.CreateUser()).Methods("POST")
+	hrOnly.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		userID, err := strconv.Atoi(vars["id"])
 		if err != nil {
@@ -64,8 +69,8 @@ func main() {
 	}).Methods("GET")
 
 	// Attendance & Department routes (butuh login)
-	protected.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
-	protected.HandleFunc("/departments", handlers.GetDepartments()).Methods("GET")
+	hrOnly.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
+	hrOnly.HandleFunc("/departments", handlers.GetDepartments()).Methods("GET")
 
 	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
