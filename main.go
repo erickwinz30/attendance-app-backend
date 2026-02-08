@@ -48,6 +48,8 @@ func main() {
 
 	// route untuk check session
 	protected.HandleFunc("/auth/check", handlers.CheckAuthentication()).Methods("GET")
+	// route untuk generate attendance token
+	protected.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
 
 	// buat route khusus HR
 	hrOnly := r.PathPrefix("/api").Subrouter()
