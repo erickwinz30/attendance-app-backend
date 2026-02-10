@@ -105,8 +105,8 @@ func createTables(db *sql.DB) {
 			id SERIAL PRIMARY KEY,
 			user_id INTEGER NOT NULL REFERENCES users(id),
 			token TEXT UNIQUE NOT NULL,
-			expires_at TIMESTAMP NOT NULL,
-			used BOOLEAN DEFAULT false,
+			expired_at TIMESTAMP NOT NULL,
+			is_used BOOLEAN DEFAULT false,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)

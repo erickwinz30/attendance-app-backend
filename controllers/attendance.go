@@ -31,15 +31,15 @@ func GenerateUserAttendanceToken(userID int) (types.AttendanceToken, error) {
 	attendanceToken := types.AttendanceToken{
 		UserID:    userID,
 		Token:     generatedToken,
-		ExpiresAt: expirationTime,
-		Used:      false,
+		ExpiredAt: expirationTime,
+		IsUsed:    false,
 		CreatedAt: time.Now(),
 	}
 
 	_, err := database.DB.Exec(`
-		INSERT INTO attendance_tokens (user_id, token, expires_at, used, created_at)
+		INSERT INTO attendance_tokens (user_id, token, expired_at, is_used, created_at)
 		VALUES ($1, $2, $3, $4, $5)
-	`, attendanceToken.UserID, attendanceToken.Token, attendanceToken.ExpiresAt, attendanceToken.Used, attendanceToken.CreatedAt)
+	`, attendanceToken.UserID, attendanceToken.Token, attendanceToken.ExpiredAt, attendanceToken.IsUsed, attendanceToken.CreatedAt)
 
 	if err != nil {
 		return attendanceToken, fmt.Errorf("gagal insert attendance token: %w", err)
