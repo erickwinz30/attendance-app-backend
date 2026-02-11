@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"backend/controllers"
+	"backend/types"
 	"encoding/json"
 	"net/http"
 )
@@ -38,6 +39,36 @@ func GenerateToken() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(attendanceToken); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func CheckAttendanceToken() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var checkReq types.CheckAttendanceToken
+
+		if err := json.NewDecoder(r.Body).Decode(&checkReq); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		checkResp, err := controllers.CheckAttendanceToken(checkReq)
+
+		if err != nil {
+			http.Error(w, "Failed to check attendance token", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(checkResp); err != nil {
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 			return
 		}

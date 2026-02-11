@@ -4,8 +4,10 @@ import (
 	"backend/database"
 	"backend/types"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -46,5 +48,61 @@ func GenerateUserAttendanceToken(userID int) (types.AttendanceToken, error) {
 	}
 
 	return attendanceToken, nil
+}
 
+func CheckAttendanceToken(data types.CheckAttendanceToken) (types.CheckAttendanceTokenResponse, error) {
+	var expired_at time.Time
+	var is_used bool
+
+	err := database.DB.QueryRow(`
+		SELECT expired_at, is_used
+		FROM attendance_tokens
+		WHERE user_id = $1 AND token = $2
+	`, data.UserID, data.Token).Scan(&expired_at, &is_used)
+
+	if err == sql.ErrNoRows {
+		log.Printf("User not found with ID: %d", data.UserID)
+		return types.CheckAttendanceTokenResponse{
+			Valid:      false,
+			Is_Used:    nil,
+			Expired_At: nil,
+			Message:    "Token not found",
+		}, nil
+	}
+
+	if err != nil {
+		log.Printf("Error fetching attendance token for user ID %d: %v", data.UserID, err)
+		return types.CheckAttendanceTokenResponse{
+			Valid:      false,
+			Is_Used:    nil,
+			Expired_At: nil,
+			Message:    "Token not found 2",
+		}, err
+	}
+
+	if is_used {
+		return types.CheckAttendanceTokenResponse{
+			Valid:      false,
+			Is_Used:    &is_used,
+			Expired_At: nil,
+			Message:    "Token already used",
+		}, nil
+	}
+
+	if time.Now().After(expired_at) {
+		return types.CheckAttendanceTokenResponse{
+			Valid:      false,
+			Is_Used:    &is_used,
+			Expired_At: &expired_at,
+			Message:    "Token expired",
+		}, nil
+	}
+
+	// jika valid
+	return types.CheckAttendanceTokenResponse{
+		Valid:      true,
+		Is_Used:    &is_used,
+		Expired_At: &expired_at,
+		Message:    "Token is valid",
+	}, nil
 }
