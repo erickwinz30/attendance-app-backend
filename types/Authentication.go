@@ -4,7 +4,7 @@ type UserAuthInfo struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
-	IsHRD bool   `json:"is_hrd"`
+	Role  string `json:"role"`
 }
 
 type AuthCheckResponse struct {

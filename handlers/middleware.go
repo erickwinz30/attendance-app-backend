@@ -87,7 +87,7 @@ func RequireHR(next http.Handler) http.Handler {
 			return
 		}
 
-		if !authResponse.Authenticated || authResponse.User == nil || !authResponse.User.IsHRD {
+		if !authResponse.Authenticated || authResponse.User == nil || authResponse.User.Role != "HR" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Forbidden - HR access only"})

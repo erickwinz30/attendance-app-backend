@@ -119,7 +119,7 @@ func createTables(db *sql.DB) {
 
 func seedDepartments(db *sql.DB) {
 	// Daftar departemen unik dari data kamu
-	departments := []string{"IT", "Product", "Design", "HR", "Marketing"}
+	departments := []string{"IT", "Product", "Design", "HR", "Marketing", "Administrator"}
 
 	for _, name := range departments {
 		_, err := db.Exec(`
@@ -145,6 +145,7 @@ func seedUsers(db *sql.DB) {
 		Status     string
 		Password   string
 	}{
+		{"Admin System", "admin@company.com", "+62 811-0000-0000", "System Administrator", "Administrator", "active", "admin123"},
 		{"Ahmad Fauzi", "ahmad.fauzi@company.com", "+62 812-3456-7890", "Software Engineer", "IT", "active", "password123"},
 		{"Siti Nurhaliza", "siti.nurhaliza@company.com", "+62 813-4567-8901", "Product Manager", "Product", "active", "password123"},
 		{"Budi Santoso", "budi.santoso@company.com", "+62 814-5678-9012", "UI/UX Designer", "Design", "active", "password123"},

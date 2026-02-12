@@ -9,6 +9,7 @@ import (
 
 func CheckAuthentication(userID int) (types.AuthCheckResponse, error) {
 	var hrdID int
+	var adminID int
 	var tempUser types.CheckUserTemp
 
 	err := database.DB.QueryRow(`
@@ -16,6 +17,12 @@ func CheckAuthentication(userID int) (types.AuthCheckResponse, error) {
 		FROM departments 
 		WHERE name = 'HR'
 	`).Scan(&hrdID)
+
+	err = database.DB.QueryRow(`
+		SELECT id 
+		FROM departments 
+		WHERE name = 'Administrator'
+	`).Scan(&adminID)
 
 	if err != nil {
 		log.Printf("Error fetching HRD department: %v", err)
@@ -39,18 +46,23 @@ func CheckAuthentication(userID int) (types.AuthCheckResponse, error) {
 	}
 
 	//check if user is from hrd department
-	isHRD := false
-	if tempUser.DepartmentID != 0 && tempUser.DepartmentID == hrdID {
-		isHRD = true
+	var role string
+
+	if tempUser.DepartmentID != 0 && tempUser.DepartmentID == adminID {
+		role = "Admin"
+	} else if tempUser.DepartmentID != 0 && tempUser.DepartmentID == hrdID {
+		role = "HR"
+	} else {
+		role = "Employee"
 	}
 
-	log.Printf("User authenticated successfully: ID=%d, Name=%s, IsHRD=%t", tempUser.ID, tempUser.Name, isHRD)
+	log.Printf("User authenticated successfully: ID=%d, Name=%s, Role=%s", tempUser.ID, tempUser.Name, role)
 
 	userAuthInfo := types.UserAuthInfo{
 		ID:    tempUser.ID,
 		Name:  tempUser.Name,
 		Email: tempUser.Email,
-		IsHRD: isHRD,
+		Role:  role,
 	}
 
 	return types.AuthCheckResponse{
