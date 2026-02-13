@@ -52,6 +52,9 @@ func main() {
 	protected.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
 	protected.HandleFunc("/attendance/token/check", handlers.CheckAttendanceToken()).Methods("POST", "OPTIONS")
 
+	// route untuk proses absensi
+	protected.HandleFunc("/attendance/submit", handlers.SubmitAttendance()).Methods("POST", "OPTIONS")
+
 	// buat route khusus HR
 	hrOnly := r.PathPrefix("/api").Subrouter()
 	hrOnly.Use(handlers.RequireAuth)

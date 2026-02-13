@@ -8,7 +8,12 @@ type AttendanceToken struct {
 	ExpiredAt time.Time `json:"expired_at" db:"expired_at"`
 	IsUsed    bool      `json:"is_used" db:"is_used"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	QRCode    string    `json:"qr_code,omitempty"` // base64 encoded QR image
+}
+
+type UserReceivedAttendanceToken struct {
+	UserID    int       `json:"user_id"`
+	Token     string    `json:"token"`
+	ExpiredAt time.Time `json:"expired_at"`
 }
 
 type CheckAttendanceToken struct {
@@ -21,4 +26,10 @@ type CheckAttendanceTokenResponse struct {
 	Is_Used    *bool      `json:"is_used"`
 	Expired_At *time.Time `json:"expired_at"`
 	Message    string     `json:"message,omitempty"`
+}
+
+type SubmitAttendanceResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	UserID  int    `json:"user_id"`
 }
