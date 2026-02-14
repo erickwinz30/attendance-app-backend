@@ -65,8 +65,43 @@ func CheckAuthentication(userID int) (types.AuthCheckResponse, error) {
 		Role:  role,
 	}
 
+	// check if user is attend today
+	rows, err := database.DB.Query(`
+    SELECT user_id, is_used 
+    FROM attendance_tokens
+    WHERE user_id = $1 AND DATE(created_at) = CURRENT_DATE
+`, userID)
+
+	if err != nil {
+		log.Printf("Error fetching attendance for user %d: %v", userID, err)
+		return types.AuthCheckResponse{Authenticated: false}, err
+	}
+	defer rows.Close()
+
+	// Check if any token has been used today
+	isAttend := false
+	for rows.Next() {
+		var userIDFromDB int
+		var isUsed bool
+
+		if err := rows.Scan(&userIDFromDB, &isUsed); err != nil {
+			log.Printf("Error scanning attendance row: %v", err)
+			continue
+		}
+
+		if isUsed {
+			isAttend = true
+			break
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating attendance rows: %v", err)
+	}
+
 	return types.AuthCheckResponse{
 		Authenticated: true,
 		User:          &userAuthInfo,
+		IsAttended:    isAttend,
 	}, nil
 }

@@ -10,4 +10,5 @@ type UserAuthInfo struct {
 type AuthCheckResponse struct {
 	Authenticated bool          `json:"authenticated"`
 	User          *UserAuthInfo `json:"user,omitempty"`
+	IsAttended    bool          `json:"is_attended"`
 }
