@@ -206,3 +206,132 @@ func SubmitAttendance(submitReq types.UserReceivedAttendanceToken) (types.Submit
 		UserID:  submitReq.UserID,
 	}, nil
 }
+
+func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
+	var attendances []types.TodayAttendance
+
+	rows, err := database.DB.Query(`
+		SELECT 
+			u.id,
+			u.name,
+			u.email,
+			d.name as department_name,
+			u.position,
+			at.created_at,
+			at.token,
+			at.is_used
+		FROM attendance_tokens at
+		JOIN users u ON at.user_id = u.id
+		JOIN departments d ON u.department_id = d.id
+		WHERE DATE(at.created_at) = CURRENT_DATE AND at.is_used = true
+		ORDER BY at.created_at ASC
+	`)
+
+	if err != nil {
+		log.Printf("Error fetching today's attendance: %v", err)
+		return types.TodayAttendanceListResponse{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var attendance types.TodayAttendance
+		err := rows.Scan(
+			&attendance.UserID,
+			&attendance.UserName,
+			&attendance.UserEmail,
+			&attendance.DepartmentName,
+			&attendance.Position,
+			&attendance.CheckInTime,
+			&attendance.Token,
+			&attendance.IsUsed,
+		)
+		if err != nil {
+			log.Printf("Error scanning attendance row: %v", err)
+			continue
+		}
+		attendances = append(attendances, attendance)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating attendance rows: %v", err)
+		return types.TodayAttendanceListResponse{}, err
+	}
+
+	// Format today's date
+	today := time.Now().Format("2006-01-02")
+
+	response := types.TodayAttendanceListResponse{
+		Date:        today,
+		TotalAttend: len(attendances),
+		Attendances: attendances,
+	}
+
+	return response, nil
+}
+
+func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
+	var attendances []types.TodayAttendance
+
+	rows, err := database.DB.Query(`
+		SELECT 
+			u.id,
+			u.name,
+			u.email,
+			d.name as department_name,
+			u.position,
+			at.created_at,
+			at.token,
+			at.is_used
+		FROM attendance_tokens at
+		JOIN users u ON at.user_id = u.id
+		JOIN departments d ON u.department_id = d.id
+		WHERE EXTRACT(MONTH FROM at.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+		  AND EXTRACT(YEAR FROM at.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+		  AND at.is_used = true
+		ORDER BY at.created_at ASC
+	`)
+
+	if err != nil {
+		log.Printf("Error fetching monthly attendance: %v", err)
+		return types.MonthlyAttendanceListResponse{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var attendance types.TodayAttendance
+		err := rows.Scan(
+			&attendance.UserID,
+			&attendance.UserName,
+			&attendance.UserEmail,
+			&attendance.DepartmentName,
+			&attendance.Position,
+			&attendance.CheckInTime,
+			&attendance.Token,
+			&attendance.IsUsed,
+		)
+		if err != nil {
+			log.Printf("Error scanning attendance row: %v", err)
+			continue
+		}
+		attendances = append(attendances, attendance)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating attendance rows: %v", err)
+		return types.MonthlyAttendanceListResponse{}, err
+	}
+
+	// Format current month and year
+	now := time.Now()
+	month := now.Format("01")  // MM format
+	year := now.Format("2006") // YYYY format
+
+	response := types.MonthlyAttendanceListResponse{
+		Month:       month,
+		Year:        year,
+		TotalAttend: len(attendances),
+		Attendances: attendances,
+	}
+
+	return response, nil
+}

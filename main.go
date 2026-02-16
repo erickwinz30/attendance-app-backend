@@ -55,6 +55,9 @@ func main() {
 	// route untuk proses absensi
 	protected.HandleFunc("/attendance/submit", handlers.SubmitAttendance()).Methods("POST", "OPTIONS")
 
+	// route untuk work hours
+	protected.HandleFunc("/work-hours", handlers.GetWorkHours()).Methods("GET")
+
 	// buat route khusus HR
 	hrOnly := r.PathPrefix("/api").Subrouter()
 	hrOnly.Use(handlers.RequireAuth)
@@ -77,6 +80,8 @@ func main() {
 	// Attendance & Department routes (butuh login)
 	// hrOnly.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
 	hrOnly.HandleFunc("/departments", handlers.GetDepartments()).Methods("GET")
+	hrOnly.HandleFunc("/attendance/today", handlers.GetTodayAttendance()).Methods("GET")
+	hrOnly.HandleFunc("/attendance/monthly", handlers.GetMonthlyAttendance()).Methods("GET")
 
 	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))

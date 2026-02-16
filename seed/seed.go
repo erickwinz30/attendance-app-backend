@@ -50,6 +50,7 @@ func main() {
 	// Seed data
 	seedDepartments(db)
 	seedUsers(db)
+	seedWorkHours(db)
 
 	fmt.Println("🌱 Migrate Fresh & Seeding selesai!")
 }
@@ -58,7 +59,7 @@ func dropTables(db *sql.DB) {
 	fmt.Println("🗑️  Menghapus tabel yang ada...")
 
 	// Drop tables dalam urutan terbalik (karena foreign key constraints)
-	tables := []string{"attendance_tokens", "users", "departments"}
+	tables := []string{"attendance_tokens", "users", "departments", "work_hours"}
 	for _, table := range tables {
 		_, err := db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table))
 		if err != nil {
@@ -114,7 +115,22 @@ func createTables(db *sql.DB) {
 		log.Fatal("Gagal membuat tabel attendance_tokens:", err)
 	}
 
-	fmt.Println("✅ Semua tabel siap (departments, users, attendance_tokens)")
+	// Tabel work_hours
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS work_hours (
+			id SERIAL PRIMARY KEY,
+			work_start_time TIME NOT NULL,
+			work_end_time TIME NOT NULL,
+			tolerance_time TIME NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		log.Fatal("Gagal membuat tabel work_hours:", err)
+	}
+
+	fmt.Println("✅ Semua tabel siap (departments, users, attendance_tokens, work_hours)")
 }
 
 func seedDepartments(db *sql.DB) {
@@ -180,4 +196,17 @@ func seedUsers(db *sql.DB) {
 		}
 	}
 	fmt.Println("✅ Pengguna disisipkan")
+}
+
+func seedWorkHours(db *sql.DB) {
+	// Set jam kerja global: 08:00 - 17:00 dengan toleransi sampai 08:15
+	_, err := db.Exec(`
+		INSERT INTO work_hours (work_start_time, work_end_time, tolerance_time)
+		VALUES ('08:00:00', '17:00:00', '08:15:00');
+	`)
+	if err != nil {
+		log.Printf("Gagal menyisipkan work_hours: %v", err)
+		return
+	}
+	fmt.Println("✅ Work hours disisipkan (08:00 - 17:00, toleransi sampai 08:15)")
 }

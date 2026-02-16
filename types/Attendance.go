@@ -33,3 +33,27 @@ type SubmitAttendanceResponse struct {
 	Message string `json:"message"`
 	UserID  int    `json:"user_id"`
 }
+
+type TodayAttendance struct {
+	UserID         int       `json:"user_id"`
+	UserName       string    `json:"user_name"`
+	UserEmail      string    `json:"user_email"`
+	DepartmentName string    `json:"department_name"`
+	Position       string    `json:"position"`
+	CheckInTime    time.Time `json:"check_in_time"`
+	Token          string    `json:"token"`
+	IsUsed         bool      `json:"is_used"`
+}
+
+type TodayAttendanceListResponse struct {
+	Date        string            `json:"date"`
+	TotalAttend int               `json:"total_attend"`
+	Attendances []TodayAttendance `json:"attendances"`
+}
+
+type MonthlyAttendanceListResponse struct {
+	Month       string            `json:"month"`
+	Year        string            `json:"year"`
+	TotalAttend int               `json:"total_attend"`
+	Attendances []TodayAttendance `json:"attendances"`
+}

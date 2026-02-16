@@ -104,3 +104,35 @@ func SubmitAttendance() http.HandlerFunc {
 		}
 	}
 }
+
+func GetTodayAttendance() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		attendances, err := controllers.GetTodayAttendance()
+		if err != nil {
+			http.Error(w, "Failed to get today's attendance", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(attendances); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func GetMonthlyAttendance() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		attendances, err := controllers.GetMonthlyAttendance()
+		if err != nil {
+			http.Error(w, "Failed to get monthly attendance", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(attendances); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}
+}
