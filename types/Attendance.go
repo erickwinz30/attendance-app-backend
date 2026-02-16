@@ -43,17 +43,32 @@ type TodayAttendance struct {
 	CheckInTime    time.Time `json:"check_in_time"`
 	Token          string    `json:"token"`
 	IsUsed         bool      `json:"is_used"`
+	Status         string    `json:"status"` // "on-time" or "late"
+}
+
+type AbsentUser struct {
+	UserID         int    `json:"user_id"`
+	UserName       string `json:"user_name"`
+	UserEmail      string `json:"user_email"`
+	DepartmentName string `json:"department_name"`
+	Position       string `json:"position"`
 }
 
 type TodayAttendanceListResponse struct {
 	Date        string            `json:"date"`
 	TotalAttend int               `json:"total_attend"`
+	TotalLate   int               `json:"total_late"`
+	TotalAbsent int               `json:"total_absent"`
 	Attendances []TodayAttendance `json:"attendances"`
+	AbsentUsers []AbsentUser      `json:"absent_users"`
 }
 
 type MonthlyAttendanceListResponse struct {
 	Month       string            `json:"month"`
 	Year        string            `json:"year"`
 	TotalAttend int               `json:"total_attend"`
+	TotalLate   int               `json:"total_late"`
+	TotalAbsent int               `json:"total_absent"`
 	Attendances []TodayAttendance `json:"attendances"`
+	AbsentUsers []AbsentUser      `json:"absent_users"`
 }

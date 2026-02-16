@@ -210,6 +210,20 @@ func SubmitAttendance(submitReq types.UserReceivedAttendanceToken) (types.Submit
 func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
 	var attendances []types.TodayAttendance
 
+	// Get tolerance time from work_hours
+	var toleranceTime string
+	err := database.DB.QueryRow(`
+		SELECT tolerance_time
+		FROM work_hours
+		ORDER BY id DESC
+		LIMIT 1
+	`).Scan(&toleranceTime)
+
+	if err != nil {
+		log.Printf("Error fetching work hours: %v", err)
+		return types.TodayAttendanceListResponse{}, err
+	}
+
 	rows, err := database.DB.Query(`
 		SELECT 
 			u.id,
@@ -233,6 +247,8 @@ func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
 	}
 	defer rows.Close()
 
+	totalLate := 0
+
 	for rows.Next() {
 		var attendance types.TodayAttendance
 		err := rows.Scan(
@@ -249,6 +265,16 @@ func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
 			log.Printf("Error scanning attendance row: %v", err)
 			continue
 		}
+
+		// Determine status (on-time or late)
+		checkInTime := attendance.CheckInTime.Format("15:04:05")
+		if checkInTime > toleranceTime {
+			attendance.Status = "late"
+			totalLate++
+		} else {
+			attendance.Status = "on-time"
+		}
+
 		attendances = append(attendances, attendance)
 	}
 
@@ -257,13 +283,63 @@ func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
 		return types.TodayAttendanceListResponse{}, err
 	}
 
+	// Get absent users (active users who haven't attended today)
+	var absentUsers []types.AbsentUser
+	absentRows, err := database.DB.Query(`
+		SELECT 
+			u.id,
+			u.name,
+			u.email,
+			d.name as department_name,
+			u.position
+		FROM users u
+		JOIN departments d ON u.department_id = d.id
+		WHERE u.status = 'active'
+		  AND u.id NOT IN (
+			  SELECT DISTINCT user_id 
+			  FROM attendance_tokens 
+			  WHERE DATE(created_at) = CURRENT_DATE AND is_used = true
+		  )
+		ORDER BY u.name ASC
+	`)
+
+	if err != nil {
+		log.Printf("Error fetching absent users: %v", err)
+		// Continue even if absent users query fails
+	} else {
+		defer absentRows.Close()
+
+		for absentRows.Next() {
+			var absentUser types.AbsentUser
+			err := absentRows.Scan(
+				&absentUser.UserID,
+				&absentUser.UserName,
+				&absentUser.UserEmail,
+				&absentUser.DepartmentName,
+				&absentUser.Position,
+			)
+			if err != nil {
+				log.Printf("Error scanning absent user row: %v", err)
+				continue
+			}
+			absentUsers = append(absentUsers, absentUser)
+		}
+
+		if err = absentRows.Err(); err != nil {
+			log.Printf("Error iterating absent user rows: %v", err)
+		}
+	}
+
 	// Format today's date
 	today := time.Now().Format("2006-01-02")
 
 	response := types.TodayAttendanceListResponse{
 		Date:        today,
 		TotalAttend: len(attendances),
+		TotalLate:   totalLate,
+		TotalAbsent: len(absentUsers),
 		Attendances: attendances,
+		AbsentUsers: absentUsers,
 	}
 
 	return response, nil
@@ -271,6 +347,20 @@ func GetTodayAttendance() (types.TodayAttendanceListResponse, error) {
 
 func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
 	var attendances []types.TodayAttendance
+
+	// Get tolerance time from work_hours
+	var toleranceTime string
+	err := database.DB.QueryRow(`
+		SELECT tolerance_time
+		FROM work_hours
+		ORDER BY id DESC
+		LIMIT 1
+	`).Scan(&toleranceTime)
+
+	if err != nil {
+		log.Printf("Error fetching work hours: %v", err)
+		return types.MonthlyAttendanceListResponse{}, err
+	}
 
 	rows, err := database.DB.Query(`
 		SELECT 
@@ -297,6 +387,8 @@ func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
 	}
 	defer rows.Close()
 
+	totalLate := 0
+
 	for rows.Next() {
 		var attendance types.TodayAttendance
 		err := rows.Scan(
@@ -313,12 +405,71 @@ func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
 			log.Printf("Error scanning attendance row: %v", err)
 			continue
 		}
+
+		// Determine status (on-time or late)
+		checkInTime := attendance.CheckInTime.Format("15:04:05")
+		if checkInTime > toleranceTime {
+			attendance.Status = "late"
+			totalLate++
+		} else {
+			attendance.Status = "on-time"
+		}
+
 		attendances = append(attendances, attendance)
 	}
 
 	if err = rows.Err(); err != nil {
 		log.Printf("Error iterating attendance rows: %v", err)
 		return types.MonthlyAttendanceListResponse{}, err
+	}
+
+	// Get absent users (active users who haven't attended at all this month)
+	var absentUsers []types.AbsentUser
+	absentRows, err := database.DB.Query(`
+		SELECT 
+			u.id,
+			u.name,
+			u.email,
+			d.name as department_name,
+			u.position
+		FROM users u
+		JOIN departments d ON u.department_id = d.id
+		WHERE u.status = 'active'
+		  AND u.id NOT IN (
+			  SELECT DISTINCT user_id 
+			  FROM attendance_tokens 
+			  WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+				AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+				AND is_used = true
+		  )
+		ORDER BY u.name ASC
+	`)
+
+	if err != nil {
+		log.Printf("Error fetching absent users: %v", err)
+		// Continue even if absent users query fails
+	} else {
+		defer absentRows.Close()
+
+		for absentRows.Next() {
+			var absentUser types.AbsentUser
+			err := absentRows.Scan(
+				&absentUser.UserID,
+				&absentUser.UserName,
+				&absentUser.UserEmail,
+				&absentUser.DepartmentName,
+				&absentUser.Position,
+			)
+			if err != nil {
+				log.Printf("Error scanning absent user row: %v", err)
+				continue
+			}
+			absentUsers = append(absentUsers, absentUser)
+		}
+
+		if err = absentRows.Err(); err != nil {
+			log.Printf("Error iterating absent user rows: %v", err)
+		}
 	}
 
 	// Format current month and year
@@ -330,7 +481,10 @@ func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
 		Month:       month,
 		Year:        year,
 		TotalAttend: len(attendances),
+		TotalLate:   totalLate,
+		TotalAbsent: len(absentUsers),
 		Attendances: attendances,
+		AbsentUsers: absentUsers,
 	}
 
 	return response, nil
