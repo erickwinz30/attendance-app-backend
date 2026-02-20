@@ -72,3 +72,18 @@ type MonthlyAttendanceListResponse struct {
 	Attendances []TodayAttendance `json:"attendances"`
 	AbsentUsers []AbsentUser      `json:"absent_users"`
 }
+
+type EmployeeMonthlyAttendanceResponse struct {
+	Month          string               `json:"month"`
+	Year           string               `json:"year"`
+	TotalPresent   int                  `json:"total_present"`
+	TotalAbsent    int                  `json:"total_absent"`
+	TotalLateHours string               `json:"total_late_hours"` // in HH:MM format
+	Attendances    []EmployeeAttendance `json:"attendances"`
+}
+
+type EmployeeAttendance struct {
+	Date        string `json:"date"`
+	CheckInTime string `json:"check_in_time"`
+	Status      string `json:"status"` // "on-time" or "late"
+}

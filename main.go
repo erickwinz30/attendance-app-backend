@@ -82,6 +82,8 @@ func main() {
 	hrOnly.HandleFunc("/departments", handlers.GetDepartments()).Methods("GET")
 	hrOnly.HandleFunc("/attendance/today", handlers.GetTodayAttendance()).Methods("GET")
 	hrOnly.HandleFunc("/attendance/monthly", handlers.GetMonthlyAttendance()).Methods("GET")
+	hrOnly.HandleFunc("/attendance/employee/monthly", handlers.GetEmployeeMonthlyAttendance()).Methods("GET")
+	hrOnly.HandleFunc("/attendance/employee/monthly", handlers.GetEmployeeMonthlyAttendance()).Methods("GET")
 
 	log.Println("Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))

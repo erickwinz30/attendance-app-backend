@@ -489,3 +489,138 @@ func GetMonthlyAttendance() (types.MonthlyAttendanceListResponse, error) {
 
 	return response, nil
 }
+
+func GetEmployeeMonthlyAttendance(userID int, month int, year int) (types.EmployeeMonthlyAttendanceResponse, error) {
+	// Get tolerance time
+	var toleranceTime string
+	err := database.DB.QueryRow(`
+		SELECT tolerance_time
+		FROM work_hours
+		ORDER BY id DESC
+		LIMIT 1
+	`).Scan(&toleranceTime)
+
+	if err != nil {
+		log.Printf("Error fetching work hours: %v", err)
+		return types.EmployeeMonthlyAttendanceResponse{}, err
+	}
+
+	// Get attendance records for the month
+	rows, err := database.DB.Query(`
+		SELECT 
+			DATE(at.created_at) as attendance_date,
+			at.created_at::time as check_in_time,
+			at.is_used
+		FROM attendance_tokens at
+		WHERE at.user_id = $1
+		  AND EXTRACT(MONTH FROM at.created_at) = $2
+		  AND EXTRACT(YEAR FROM at.created_at) = $3
+		  AND at.is_used = true
+		ORDER BY at.created_at ASC
+	`, userID, month, year)
+
+	if err != nil {
+		log.Printf("Error fetching employee attendance: %v", err)
+		return types.EmployeeMonthlyAttendanceResponse{}, err
+	}
+	defer rows.Close()
+
+	var attendances []types.EmployeeAttendance
+	totalLateMinutes := 0
+
+	for rows.Next() {
+		var date string
+		var checkInTime string
+		var isUsed bool
+
+		err := rows.Scan(&date, &checkInTime, &isUsed)
+		if err != nil {
+			log.Printf("Error scanning attendance row: %v", err)
+			continue
+		}
+
+		status := "on-time"
+		if checkInTime > toleranceTime {
+			status = "late"
+			// Calculate late minutes
+			lateMinutes := calculateLateMinutes(checkInTime, toleranceTime)
+			totalLateMinutes += lateMinutes
+		}
+
+		attendance := types.EmployeeAttendance{
+			Date:        date,
+			CheckInTime: checkInTime,
+			Status:      status,
+		}
+		attendances = append(attendances, attendance)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating attendance rows: %v", err)
+		return types.EmployeeMonthlyAttendanceResponse{}, err
+	}
+
+	// Calculate total working days in the month (weekdays)
+	totalWorkingDays := calculateWorkingDaysInMonth(year, month)
+
+	// Total present is the number of attendance records
+	totalPresent := len(attendances)
+
+	// Total absent is working days minus present days
+	totalAbsent := totalWorkingDays - totalPresent
+
+	// Convert total late minutes to HH:MM format
+	totalLateHours := formatMinutesToHHMM(totalLateMinutes)
+
+	response := types.EmployeeMonthlyAttendanceResponse{
+		Month:          fmt.Sprintf("%02d", month),
+		Year:           fmt.Sprintf("%d", year),
+		TotalPresent:   totalPresent,
+		TotalAbsent:    totalAbsent,
+		TotalLateHours: totalLateHours,
+		Attendances:    attendances,
+	}
+
+	return response, nil
+}
+
+func calculateLateMinutes(checkInTime, toleranceTime string) int {
+	// Parse times
+	checkIn, err1 := time.Parse("15:04:05", checkInTime)
+	tolerance, err2 := time.Parse("15:04:05", toleranceTime)
+
+	if err1 != nil || err2 != nil {
+		return 0
+	}
+
+	if checkIn.After(tolerance) {
+		diff := checkIn.Sub(tolerance)
+		return int(diff.Minutes())
+	}
+
+	return 0
+}
+
+func calculateWorkingDaysInMonth(year, month int) int {
+	// Create time for first day of month
+	firstDay := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+
+	// Get last day of month
+	lastDay := firstDay.AddDate(0, 1, -1)
+
+	workingDays := 0
+	for d := firstDay; d.Before(lastDay) || d.Equal(lastDay); d = d.AddDate(0, 0, 1) {
+		// Skip weekends (Saturday = 6, Sunday = 0)
+		if d.Weekday() != time.Saturday && d.Weekday() != time.Sunday {
+			workingDays++
+		}
+	}
+
+	return workingDays
+}
+
+func formatMinutesToHHMM(minutes int) string {
+	hours := minutes / 60
+	mins := minutes % 60
+	return fmt.Sprintf("%02d:%02d", hours, mins)
+}

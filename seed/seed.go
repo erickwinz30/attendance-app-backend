@@ -2,7 +2,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -51,6 +53,7 @@ func main() {
 	seedDepartments(db)
 	seedUsers(db)
 	seedWorkHours(db)
+	seedAttendance(db)
 
 	fmt.Println("🌱 Migrate Fresh & Seeding selesai!")
 }
@@ -209,4 +212,80 @@ func seedWorkHours(db *sql.DB) {
 		return
 	}
 	fmt.Println("✅ Work hours disisipkan (08:00 - 17:00, toleransi sampai 08:15)")
+}
+
+func seedAttendance(db *sql.DB) {
+	// Seed attendance data for user ID 1 (Ahmad Fauzi) from Jan 1 to Feb 15, 2026
+	// Some days on-time, some late, some absent
+
+	attendanceData := []struct {
+		date   string
+		time   string
+		isUsed bool
+	}{
+		// January 2026
+		{"2026-01-02", "07:45:00", true}, // Thursday - on-time
+		{"2026-01-03", "08:20:00", true}, // Friday - late
+		{"2026-01-06", "07:50:00", true}, // Monday - on-time
+		{"2026-01-07", "08:10:00", true}, // Tuesday - on-time
+		{"2026-01-08", "08:25:00", true}, // Wednesday - late
+		{"2026-01-09", "07:40:00", true}, // Thursday - on-time
+		{"2026-01-10", "08:30:00", true}, // Friday - late
+		{"2026-01-13", "07:55:00", true}, // Monday - on-time
+		{"2026-01-14", "08:05:00", true}, // Tuesday - on-time
+		{"2026-01-15", "08:18:00", true}, // Wednesday - late (just within tolerance)
+		{"2026-01-16", "07:35:00", true}, // Thursday - on-time
+		{"2026-01-17", "08:40:00", true}, // Friday - late
+		{"2026-01-20", "07:50:00", true}, // Monday - on-time
+		{"2026-01-21", "08:00:00", true}, // Tuesday - on-time
+		{"2026-01-22", "08:22:00", true}, // Wednesday - late
+		{"2026-01-23", "07:45:00", true}, // Thursday - on-time
+		{"2026-01-24", "08:35:00", true}, // Friday - late
+		{"2026-01-27", "07:52:00", true}, // Monday - on-time
+		{"2026-01-28", "08:12:00", true}, // Tuesday - on-time
+		{"2026-01-29", "08:28:00", true}, // Wednesday - late
+		{"2026-01-30", "07:48:00", true}, // Thursday - on-time
+		{"2026-01-31", "08:45:00", true}, // Friday - late
+
+		// February 2026
+		{"2026-02-03", "07:42:00", true}, // Monday - on-time
+		{"2026-02-04", "08:15:00", true}, // Tuesday - on-time (exactly tolerance)
+		{"2026-02-05", "08:50:00", true}, // Wednesday - late
+		{"2026-02-06", "07:38:00", true}, // Thursday - on-time
+		{"2026-02-07", "08:32:00", true}, // Friday - late
+		{"2026-02-10", "07:47:00", true}, // Monday - on-time
+		{"2026-02-11", "08:08:00", true}, // Tuesday - on-time
+		{"2026-02-12", "08:55:00", true}, // Wednesday - late
+		{"2026-02-13", "07:43:00", true}, // Thursday - on-time
+		{"2026-02-14", "08:38:00", true}, // Friday - late
+	}
+
+	for _, att := range attendanceData {
+		// Generate a random token for each attendance
+		token := generateRandomToken()
+
+		// Set expired_at to 5 minutes after created_at
+		createdAt := att.date + " " + att.time
+		expiredAt := att.date + " " + att.time + "+00:05:00" // Add 5 minutes
+
+		_, err := db.Exec(`
+			INSERT INTO attendance_tokens (user_id, token, expired_at, is_used, created_at)
+			VALUES ($1, $2, $3, $4, $5)
+		`, 2, token, expiredAt, att.isUsed, createdAt)
+
+		if err != nil {
+			log.Printf("Gagal menyisipkan attendance untuk tanggal %s: %v", att.date, err)
+			continue
+		}
+	}
+
+	fmt.Printf("✅ Attendance data disisipkan untuk user ID 1 (%d records)\n", len(attendanceData))
+}
+
+func generateRandomToken() string {
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		return "fallback-token"
+	}
+	return hex.EncodeToString(bytes)
 }
