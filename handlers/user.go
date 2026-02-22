@@ -3,6 +3,7 @@ package handlers
 import (
 	"backend/controllers"
 	"backend/types"
+	"backend/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -88,5 +89,77 @@ func SearchUsers() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(users)
+	}
+}
+
+func EditUser(userID int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var editRequest types.EditUserRequest
+
+		// Parse JSON dari request body
+		err := json.NewDecoder(r.Body).Decode(&editRequest)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Gagal memproses data JSON: %v", err), http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		// Validasi data kosong
+		if editRequest.Name == "" && editRequest.Email == "" && editRequest.Phone == "" &&
+			editRequest.Position == "" && editRequest.DepartmentID == 0 && editRequest.Status == "" {
+			http.Error(w, "Minimal ada satu field yang harus diisi untuk update", http.StatusBadRequest)
+			return
+		}
+
+		// Jika name kosong, return error
+		if editRequest.Name == "" {
+			http.Error(w, "field name tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		// Jika email kosong, return error
+		if editRequest.Email == "" {
+			http.Error(w, "field email tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		// Jika phone kosong, return error
+		if editRequest.Phone == "" {
+			http.Error(w, "field phone tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		// Jika position kosong, return error
+		if editRequest.Position == "" {
+			http.Error(w, "field position tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		// Jika department_id kosong/0, return error
+		if editRequest.DepartmentID == 0 {
+			http.Error(w, "field department_id tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		// Jika status kosong, return error
+		if editRequest.Status == "" {
+			http.Error(w, "field status tidak boleh kosong", http.StatusBadRequest)
+			return
+		}
+
+		fmt.Println("Edit User Request (handlers):", editRequest)
+
+		// Panggil controller untuk edit user
+		result, err := controllers.EditUser(userID, editRequest)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Gagal mengedit pengguna: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		utils.LogEditUser(userID, result)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(result)
 	}
 }

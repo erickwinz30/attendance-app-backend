@@ -76,6 +76,15 @@ func main() {
 		}
 		handlers.GetUser(userID)(w, r)
 	}).Methods("GET")
+	hrOnly.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		userID, err := strconv.Atoi(vars["id"])
+		if err != nil {
+			http.Error(w, "Invalid user ID", http.StatusBadRequest)
+			return
+		}
+		handlers.EditUser(userID)(w, r)
+	}).Methods("PUT")
 
 	// Attendance & Department routes (butuh login)
 	// hrOnly.HandleFunc("/attendance/token", handlers.GenerateToken()).Methods("GET")
