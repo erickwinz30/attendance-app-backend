@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -30,8 +31,12 @@ func init() {
 }
 
 func main() {
+	// Buat rate limiter: 60 request per 1 menit
+	limiter := middleware.NewRateLimiter(60, time.Minute)
+
 	r := mux.NewRouter()
 	r.Use(middleware.CORSMiddleware)
+	r.Use(middleware.RateLimitMiddleware(limiter))
 
 	// Route publik (tidak perlu login)
 	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
